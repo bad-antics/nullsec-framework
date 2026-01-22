@@ -44,6 +44,13 @@ MODULES = {
             "language": "Clojure",
             "command": "clj -M sniffer.clj",
             "description": "Network packet analyzer"
+        },
+        "netprobe": {
+            "name": "NullSec NetProbe",
+            "repo": "nullsec-netprobe",
+            "language": "Nim",
+            "command": "nim c -r netprobe.nim",
+            "description": "Stealthy network reconnaissance"
         }
     },
     "exploit": {
@@ -53,6 +60,20 @@ MODULES = {
             "language": "Odin",
             "command": "./injector",
             "description": "Process memory injector"
+        },
+        "memcorrupt": {
+            "name": "NullSec MemCorrupt",
+            "repo": "nullsec-memcorrupt",
+            "language": "Zig",
+            "command": "zig run memcorrupt.zig",
+            "description": "Memory corruption exploitation toolkit"
+        },
+        "shellcraft": {
+            "name": "NullSec ShellCraft",
+            "repo": "nullsec-shellcraft",
+            "language": "Racket",
+            "command": "racket shellcraft.rkt",
+            "description": "Shellcode generation DSL"
         }
     },
     "crypto": {
@@ -62,6 +83,13 @@ MODULES = {
             "language": "Julia",
             "command": "julia hashwitch.jl",
             "description": "High-performance hash cracker"
+        },
+        "cryptwrap": {
+            "name": "NullSec CryptWrap",
+            "repo": "nullsec-cryptwrap",
+            "language": "Ada/SPARK",
+            "command": "gnatmake cryptwrap.adb && ./cryptwrap",
+            "description": "Formally verified cryptographic wrapper"
         }
     },
     "forensics": {
@@ -71,6 +99,13 @@ MODULES = {
             "language": "Scala",
             "command": "scala logwipe.scala",
             "description": "Log analysis and manipulation"
+        },
+        "procspy": {
+            "name": "NullSec ProcSpy",
+            "repo": "nullsec-procspy",
+            "language": "Forth",
+            "command": "gforth procspy.fs",
+            "description": "Minimal footprint process monitor"
         }
     },
     "stealth": {
@@ -96,6 +131,22 @@ MODULES = {
             "language": "F#",
             "command": "dotnet fsi keysniff.fsx",
             "description": "Keyboard event monitor"
+        }
+    },
+    "resources": {
+        "payloads": {
+            "name": "NullSec Payloads",
+            "repo": "nullsec-payloads",
+            "language": "Mixed",
+            "command": "ls payloads/",
+            "description": "Shellcode and exploit templates"
+        },
+        "wordlists": {
+            "name": "NullSec Wordlists",
+            "repo": "nullsec-wordlists",
+            "language": "Text",
+            "command": "ls wordlists/",
+            "description": "Security testing wordlists"
         }
     }
 }
