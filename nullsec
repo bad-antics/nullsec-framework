@@ -1,0 +1,363 @@
+#!/usr/bin/env python3
+"""
+NullSec Framework - Unified Security Testing Platform
+Author: bad-antics
+License: NullSec Proprietary
+"""
+
+import os
+import sys
+import json
+import argparse
+import subprocess
+from pathlib import Path
+from typing import Dict, List, Optional
+import shutil
+
+VERSION = "1.0.0"
+
+BANNER = """
+    ███▄    █  █    ██  ██▓     ██▓      ██████ ▓█████  ▄████▄  
+    ██ ▀█   █  ██  ▓██▒▓██▒    ▓██▒    ▒██    ▒ ▓█   ▀ ▒██▀ ▀█  
+   ▓██  ▀█ ██▒▓██  ▒██░▒██░    ▒██░    ░ ▓██▄   ▒███   ▒▓█    ▄ 
+   ▓██▒  ▐▌██▒▓▓█  ░██░▒██░    ▒██░      ▒   ██▒▒▓█  ▄ ▒▓▓▄ ▄██▒
+   ▒██░   ▓██░▒▒█████▓ ░██████▒░██████▒▒██████▒▒░▒████▒▒ ▓███▀ ░
+   ▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+   █░░░░░░░░░░░░░░░ F R A M E W O R K ░░░░░░░░░░░░░░░░░░░░░░░█
+   ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
+                       bad-antics v{}
+""".format(VERSION)
+
+# Module registry
+MODULES = {
+    "recon": {
+        "portscan": {
+            "name": "NullSec PortScan",
+            "repo": "nullsec-portscan",
+            "language": "Elixir",
+            "command": "elixir portscan.exs",
+            "description": "Lightning-fast async port scanner"
+        },
+        "sniffer": {
+            "name": "NullSec Sniffer",
+            "repo": "nullsec-sniffer",
+            "language": "Clojure",
+            "command": "clj -M sniffer.clj",
+            "description": "Network packet analyzer"
+        }
+    },
+    "exploit": {
+        "injector": {
+            "name": "NullSec Injector",
+            "repo": "nullsec-injector",
+            "language": "Odin",
+            "command": "./injector",
+            "description": "Process memory injector"
+        }
+    },
+    "crypto": {
+        "hashwitch": {
+            "name": "NullSec HashWitch",
+            "repo": "nullsec-hashwitch",
+            "language": "Julia",
+            "command": "julia hashwitch.jl",
+            "description": "High-performance hash cracker"
+        }
+    },
+    "forensics": {
+        "logwipe": {
+            "name": "NullSec LogWipe",
+            "repo": "nullsec-logwipe",
+            "language": "Scala",
+            "command": "scala logwipe.scala",
+            "description": "Log analysis and manipulation"
+        }
+    },
+    "stealth": {
+        "cloaker": {
+            "name": "NullSec Cloaker",
+            "repo": "nullsec-cloaker",
+            "language": "Erlang",
+            "command": "escript cloaker.erl",
+            "description": "Process and file cloaking"
+        }
+    },
+    "c2": {
+        "beacon": {
+            "name": "NullSec Beacon",
+            "repo": "nullsec-beacon",
+            "language": "OCaml",
+            "command": "./beacon",
+            "description": "Lightweight beacon system"
+        },
+        "keysniff": {
+            "name": "NullSec KeySniff",
+            "repo": "nullsec-keysniff",
+            "language": "F#",
+            "command": "dotnet fsi keysniff.fsx",
+            "description": "Keyboard event monitor"
+        }
+    }
+}
+
+class NullSecFramework:
+    def __init__(self):
+        self.home = Path.home() / ".nullsec"
+        self.modules_dir = self.home / "modules"
+        self.config_file = self.home / "config.json"
+        self.session = {}
+        self.current_module = None
+        
+    def init(self):
+        """Initialize framework directories"""
+        print("[*] Initializing NullSec Framework...")
+        
+        # Create directories
+        self.home.mkdir(exist_ok=True)
+        self.modules_dir.mkdir(exist_ok=True)
+        (self.home / "data").mkdir(exist_ok=True)
+        (self.home / "logs").mkdir(exist_ok=True)
+        (self.home / "reports").mkdir(exist_ok=True)
+        
+        # Create default config
+        if not self.config_file.exists():
+            config = {
+                "workspace": str(self.home / "workspace"),
+                "github_user": "bad-antics",
+                "auto_update": True,
+                "verbose": False
+            }
+            self.config_file.write_text(json.dumps(config, indent=2))
+        
+        print("[+] Framework initialized at", self.home)
+        
+    def list_modules(self, category: Optional[str] = None):
+        """List available modules"""
+        print("\n=== Available Modules ===\n")
+        
+        for cat, modules in MODULES.items():
+            if category and cat != category:
+                continue
+                
+            print(f"[{cat.upper()}]")
+            for name, info in modules.items():
+                installed = "✓" if self.is_installed(info["repo"]) else " "
+                print(f"  [{installed}] {cat}/{name}")
+                print(f"      {info['description']}")
+                print(f"      Language: {info['language']}")
+            print()
+            
+    def is_installed(self, repo: str) -> bool:
+        """Check if module is installed"""
+        return (self.modules_dir / repo).exists()
+        
+    def install_module(self, module_path: str):
+        """Install a module from GitHub"""
+        parts = module_path.split("/")
+        if len(parts) == 2:
+            category, name = parts
+        else:
+            name = parts[0]
+            category = self._find_category(name)
+            
+        if category not in MODULES or name not in MODULES[category]:
+            print(f"[!] Unknown module: {module_path}")
+            return
+            
+        info = MODULES[category][name]
+        repo = info["repo"]
+        
+        if self.is_installed(repo):
+            print(f"[*] Module already installed: {name}")
+            return
+            
+        print(f"[*] Installing {info['name']}...")
+        
+        try:
+            subprocess.run([
+                "git", "clone",
+                f"https://github.com/bad-antics/{repo}.git",
+                str(self.modules_dir / repo)
+            ], check=True)
+            print(f"[+] Installed: {name}")
+        except subprocess.CalledProcessError:
+            print(f"[!] Failed to install: {name}")
+            
+    def _find_category(self, name: str) -> Optional[str]:
+        """Find category for a module name"""
+        for cat, modules in MODULES.items():
+            if name in modules:
+                return cat
+        return None
+        
+    def use_module(self, module_path: str):
+        """Set current module"""
+        parts = module_path.split("/")
+        if len(parts) == 2:
+            category, name = parts
+        else:
+            name = parts[0]
+            category = self._find_category(name)
+            
+        if category not in MODULES or name not in MODULES[category]:
+            print(f"[!] Unknown module: {module_path}")
+            return
+            
+        self.current_module = {
+            "category": category,
+            "name": name,
+            "info": MODULES[category][name],
+            "options": {}
+        }
+        print(f"[*] Using module: {category}/{name}")
+        
+    def show_options(self):
+        """Show current module options"""
+        if not self.current_module:
+            print("[!] No module selected")
+            return
+            
+        info = self.current_module["info"]
+        print(f"\n=== {info['name']} ===")
+        print(f"Description: {info['description']}")
+        print(f"Language: {info['language']}")
+        print(f"Repository: {info['repo']}")
+        print()
+        
+    def run_module(self, args: List[str] = None):
+        """Run current module"""
+        if not self.current_module:
+            print("[!] No module selected")
+            return
+            
+        info = self.current_module["info"]
+        repo_path = self.modules_dir / info["repo"]
+        
+        if not repo_path.exists():
+            print(f"[!] Module not installed. Run: install {self.current_module['category']}/{self.current_module['name']}")
+            return
+            
+        cmd = info["command"]
+        if args:
+            cmd = f"{cmd} {' '.join(args)}"
+            
+        print(f"[*] Running: {cmd}")
+        subprocess.run(cmd, shell=True, cwd=repo_path)
+        
+    def console(self):
+        """Interactive console"""
+        print(BANNER)
+        print("Type 'help' for available commands\n")
+        
+        while True:
+            try:
+                if self.current_module:
+                    prompt = f"nullsec ({self.current_module['category']}/{self.current_module['name']})> "
+                else:
+                    prompt = "nullsec> "
+                    
+                line = input(prompt).strip()
+                
+                if not line:
+                    continue
+                    
+                parts = line.split()
+                cmd = parts[0].lower()
+                args = parts[1:]
+                
+                if cmd in ("exit", "quit", "q"):
+                    break
+                elif cmd == "help":
+                    self._print_help()
+                elif cmd == "modules" or cmd == "list":
+                    cat = args[0] if args else None
+                    self.list_modules(cat)
+                elif cmd == "use":
+                    if args:
+                        self.use_module(args[0])
+                    else:
+                        print("[!] Usage: use <category/module>")
+                elif cmd == "install":
+                    if args:
+                        self.install_module(args[0])
+                    else:
+                        print("[!] Usage: install <category/module>")
+                elif cmd == "options" or cmd == "info":
+                    self.show_options()
+                elif cmd == "run":
+                    self.run_module(args)
+                elif cmd == "back":
+                    self.current_module = None
+                elif cmd == "clear":
+                    os.system("clear" if os.name != "nt" else "cls")
+                else:
+                    print(f"[!] Unknown command: {cmd}")
+                    
+            except KeyboardInterrupt:
+                print("\n[*] Use 'exit' to quit")
+            except EOFError:
+                break
+                
+        print("\n[*] Goodbye!")
+        
+    def _print_help(self):
+        """Print help message"""
+        print("""
+Commands:
+    modules [category]   List available modules
+    use <module>         Select a module
+    install <module>     Install a module
+    options              Show current module options
+    run [args]           Run current module
+    back                 Deselect current module
+    clear                Clear screen
+    help                 Show this help
+    exit                 Exit framework
+    
+Examples:
+    use recon/portscan
+    install crypto/hashwitch
+    run --help
+""")
+
+
+def main():
+    parser = argparse.ArgumentParser(description="NullSec Framework")
+    subparsers = parser.add_subparsers(dest="command")
+    
+    # Init command
+    subparsers.add_parser("init", help="Initialize framework")
+    
+    # Console command
+    subparsers.add_parser("console", help="Start interactive console")
+    
+    # Module commands
+    module_parser = subparsers.add_parser("module", help="Module management")
+    module_sub = module_parser.add_subparsers(dest="module_cmd")
+    module_sub.add_parser("list", help="List modules")
+    install_parser = module_sub.add_parser("install", help="Install module")
+    install_parser.add_argument("name", help="Module name")
+    
+    # Version
+    parser.add_argument("--version", action="version", version=f"NullSec Framework v{VERSION}")
+    
+    args = parser.parse_args()
+    
+    fw = NullSecFramework()
+    
+    if args.command == "init":
+        fw.init()
+    elif args.command == "console":
+        fw.console()
+    elif args.command == "module":
+        if args.module_cmd == "list":
+            fw.list_modules()
+        elif args.module_cmd == "install":
+            fw.install_module(args.name)
+    else:
+        # Default to console
+        fw.console()
+
+
+if __name__ == "__main__":
+    main()
