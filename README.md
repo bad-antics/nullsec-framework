@@ -88,6 +88,11 @@
 | [nullsec-android](https://github.com/bad-antics/nullsec-android) | Kotlin, Java | Android security toolkit |
 | [nullsec-ios](https://github.com/bad-antics/nullsec-ios) | Swift, Objective-C | iOS security toolkit |
 
+### Monitoring & Console
+| Tool | Language | Description |
+|------|----------|-------------|
+| [glowbarn](https://github.com/bad-antics/glowbarn-rs) | Rust | Security console & resource monitoring |
+
 ## Installation
 
 ```bash
