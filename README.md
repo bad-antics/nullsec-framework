@@ -236,7 +236,7 @@ class MyModule(Module):
 
 ## Community
 
-- **Discord**: [discord.gg/killers](https://discord.gg/killers)
+- **Twitter**: [x.com/AnonAntics](https://x.com/AnonAntics)
 - **GitHub**: [@bad-antics](https://github.com/bad-antics)
 
 ## Disclaimer
